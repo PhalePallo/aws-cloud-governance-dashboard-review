@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AWS Cloud Governance Dashboard</title>
+  <link rel="stylesheet" href="../src/style.css" />
+</head>
+<body>
+  <header>
+    <h1>AWS Cloud Governance Dashboard</h1>
+    <p>Read-only governance & audit visibility</p>
+  </header>
+
+  <main>
+    <section>
+      <button id="loadLogsBtn">Load Audit Logs</button>
+      <p id="status"></p>
+    </section>
+
+    <section>
+      <h2>Audit Logs</h2>
+      <ul id="logs"></ul>
+    </section>
+  </main>
+
+  <footer>
+    <small>Static frontend — S3 + CloudFront ready</small>
+  </footer>
+
+  <!-- IMPORTANT -->
+  <script type="module" src="../src/app.js"></script>
+</body>
+</html>

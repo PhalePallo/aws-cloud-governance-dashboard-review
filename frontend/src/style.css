@@ -1,0 +1,35 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  margin: 0;
+}
+
+header {
+  background: #232f3e;
+  color: #fff;
+  padding: 1rem;
+}
+
+main {
+  padding: 1rem;
+}
+
+button {
+  background: #ff9900;
+  border: none;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  background: white;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  border-left: 4px solid #232f3e;
+}
