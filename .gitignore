@@ -1,14 +1,11 @@
 # Terraform
-terraform/.terraform/
-terraform/*.tfstate
-terraform/*.tfstate.*
-terraform/terraform.tfvars
-terraform/.terraform.lock.hcl
-terraform/bin/
-lambda-dist/
-lambda.zip
-lambda-deployment.zip
+.terraform/
+*.tfstate
+*.tfstate.backup
+terraform.tfvars
+
+# AWS
+.aws/
 
 # Node
 node_modules/
-dist/

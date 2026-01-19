@@ -1,12 +1,10 @@
-# frontend.tf
-
-# Frontend S3 Bucket
+# S3 bucket for frontend
 resource "aws_s3_bucket" "frontend" {
   bucket        = "aws-cloud-governance-frontend-${data.aws_caller_identity.current.account_id}"
-  force_destroy = true  # allows bucket deletion with objects
+  force_destroy = true
 }
 
-# Allow public access for CloudFront to serve content
+# Block public access (CloudFront will handle access)
 resource "aws_s3_bucket_public_access_block" "frontend" {
   bucket = aws_s3_bucket.frontend.id
 
@@ -17,30 +15,21 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
 }
 
 # Upload frontend files
-resource "aws_s3_bucket_object" "index_html" {
-  bucket       = aws_s3_bucket.frontend.id
-  key          = "index.html"
-  source       = "${path.module}/../frontend/public/index.html"
-  content_type = "text/html"
-}
+resource "aws_s3_object" "frontend_files" {
+  for_each = {
+    "index.html" = "${path.module}/../frontend/public/index.html"
+    "app.js"     = "${path.module}/../frontend/src/app.js"
+    "api.js"     = "${path.module}/../frontend/src/api.js"
+    "style.css"  = "${path.module}/../frontend/src/style.css"
+  }
 
-resource "aws_s3_bucket_object" "app_js" {
   bucket       = aws_s3_bucket.frontend.id
-  key          = "app.js"
-  source       = "${path.module}/../frontend/src/app.js"
-  content_type = "application/javascript"
-}
-
-resource "aws_s3_bucket_object" "api_js" {
-  bucket       = aws_s3_bucket.frontend.id
-  key          = "api.js"
-  source       = "${path.module}/../frontend/src/api.js"
-  content_type = "application/javascript"
-}
-
-resource "aws_s3_bucket_object" "style_css" {
-  bucket       = aws_s3_bucket.frontend.id
-  key          = "style.css"
-  source       = "${path.module}/../frontend/src/style.css"
-  content_type = "text/css"
+  key          = each.key
+  source       = each.value
+  content_type = lookup({
+    "index.html" = "text/html"
+    "app.js"     = "application/javascript"
+    "api.js"     = "application/javascript"
+    "style.css"  = "text/css"
+  }, each.key)
 }

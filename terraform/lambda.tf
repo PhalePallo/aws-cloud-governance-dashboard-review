@@ -1,3 +1,4 @@
+# Lambda function
 resource "aws_lambda_function" "audit_api" {
   filename         = "../lambda.zip"
   function_name    = "${var.project_name}-audit-api"
@@ -15,6 +16,7 @@ resource "aws_lambda_function" "audit_api" {
   }
 }
 
+# API Gateway
 resource "aws_api_gateway_rest_api" "api" {
   name        = "${var.project_name}-api"
   description = "API for Lambda audit function"
@@ -42,6 +44,7 @@ resource "aws_api_gateway_integration" "lambda_integration" {
   uri                     = aws_lambda_function.audit_api.invoke_arn
 }
 
+# Lambda permission for API Gateway
 resource "aws_lambda_permission" "api_gateway_invoke" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
@@ -52,11 +55,16 @@ resource "aws_lambda_permission" "api_gateway_invoke" {
   depends_on = [aws_lambda_function.audit_api]
 }
 
+# API Gateway Deployment
 resource "aws_api_gateway_deployment" "deployment" {
   rest_api_id = aws_api_gateway_rest_api.api.id
-  depends_on  = [aws_api_gateway_integration.lambda_integration]
+
+  depends_on = [
+    aws_api_gateway_integration.lambda_integration
+  ]
 }
 
+# API Gateway Stage
 resource "aws_api_gateway_stage" "dev_stage" {
   stage_name    = "dev"
   rest_api_id   = aws_api_gateway_rest_api.api.id

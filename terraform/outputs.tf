@@ -1,19 +1,14 @@
 output "api_endpoint" {
-  value = aws_api_gateway_deployment.deployment.invoke_url
+  description = "The API Gateway endpoint for the audit API"
+  value       = aws_api_gateway_stage.dev_stage.invoke_url
 }
 
-output "lambda_arn" {
-  value = aws_lambda_function.audit_api.arn
+output "frontend_bucket_name" {
+  description = "S3 bucket for frontend"
+  value       = aws_s3_bucket.frontend.id
 }
 
-output "lambda_name" {
-  value = aws_lambda_function.audit_api.function_name
-}
-
-output "caller_arn" {
-  value = data.aws_caller_identity.current.arn
-}
-
-output "region" {
-  value = var.aws_region
+output "cloudfront_domain_name" {
+  description = "CloudFront distribution domain name"
+  value       = aws_cloudfront_distribution.frontend.domain_name
 }
