@@ -1,10 +1,23 @@
-import { getAuditLogs } from "../getAuditLogs";
+import { fetchLogs } from "../services/dynamodb";
 
-describe("getAuditLogs", () => {
-  test("returns audit logs successfully", async () => {
-    const result = await getAuditLogs();
+export const getAuditLogs = async () => {
+    try {
+        const logs = await fetchLogs();
 
-    expect(result).toBeDefined();
-    expect(Array.isArray(result)).toBe(true);
-  });
-});
+        return {
+            statusCode: 200,
+            headers: {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            },
+            body: JSON.stringify(logs)
+        };
+    } catch (error) {
+        console.error("Error fetching audit logs", error);
+
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ message: "Internal Server Error" })
+        };
+    }
+};
