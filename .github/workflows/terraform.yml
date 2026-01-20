@@ -4,19 +4,16 @@ on:
   push:
     branches:
       - main
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   terraform:
     name: Deploy Terraform
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -24,13 +21,13 @@ jobs:
           role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
           aws-region: us-east-1
 
-      - name: Setup Terraform
+      - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.8.5
+          terraform_version: 1.5.0
 
       - name: Terraform Init
-        run: terraform init -input=false
+        run: terraform init
 
       - name: Terraform Format Check
         run: terraform fmt -check
@@ -39,8 +36,8 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan -input=false
+        run: terraform plan -out=tfplan
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
-        run: terraform apply -input=false -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan
