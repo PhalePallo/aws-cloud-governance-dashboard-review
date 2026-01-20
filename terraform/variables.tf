@@ -1,29 +1,14 @@
-variable "project_name" {
-  description = "The name of the project for naming resources"
-  type        = string
-  default     = "aws-cloud-governance"
-}
+ git status
+On branch main
+Your branch is up to date with 'origin/main'.
 
-variable "aws_region" {
-  description = "AWS region to deploy resources in"
-  type        = string
-  default     = "us-east-1"
-}
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+        deleted:    .github/workflows/terraform.yml
+        modified:   terraform/variables.tf
+        deleted:    terraform/vpc.tf
 
-variable "vpc_cidr" {
-  description = "CIDR block for the VPC"
-  type        = string
-  default     = "10.0.0.0/16"
-}
+no changes added to commit (use "git add" and/or "git commit -a")
 
-variable "public_subnet_cidrs" {
-  description = "List of CIDRs for public subnets"
-  type        = list(string)
-  default     = ["10.0.1.0/24", "10.0.2.0/24"]
-}
-
-variable "private_subnet_cidrs" {
-  description = "List of CIDRs for private subnets"
-  type        = list(string)
-  default     = ["10.0.3.0/24", "10.0.4.0/24"]
-}
+phale@DESKTOP-VKF01OH MINGW64 ~/OneDrive/Desktop/Project/aws-cloud-governance-dashboard (main)
