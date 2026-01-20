@@ -2,26 +2,32 @@ name: Terraform Deploy
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform.yml"
+  workflow_dispatch:
 
 permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: terraform-main
+  cancel-in-progress: false
+
 jobs:
   terraform:
     runs-on: ubuntu-latest
-
     defaults:
       run:
         working-directory: terraform
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::659587495811:role/GitHubActionsTerraformRole
@@ -32,11 +38,18 @@ jobs:
         with:
           terraform_version: 1.6.6
 
-      - name: Terraform Init
-        run: terraform init
+      - name: Terraform fmt (check)
+        run: terraform fmt -check -recursive
 
-      - name: Terraform Validate
-        run: terraform validate
+      - name: Terraform init
+        run: terraform init -input=false
 
-      - name: Terraform Plan
-        run: terraform plan -no-color
+      - name: Terraform validate
+        run: terraform validate -no-color
+
+      - name: Terraform plan
+        run: terraform plan -no-color -input=false -out=tfplan
+
+      - name: Terraform apply (main only)
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -input=false -auto-approve tfplan
