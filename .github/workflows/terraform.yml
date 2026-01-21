@@ -67,41 +67,28 @@ jobs:
           terraform_version: 1.7.5
           terraform_wrapper: false
 
-      # IMPORTANT: We do NOT use secrets.* in an `if:` expression.
-      # We check them inside bash and output ready=true/false.
       - name: Precheck required secrets
         id: precheck
         shell: bash
+        env:
+          AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+          TF_STATE_DDB_TABLE: ${{ secrets.TF_STATE_DDB_TABLE }}
         run: |
           missing=0
-
-          if [ -z "${AWS_ROLE_TO_ASSUME}" ]; then
-            echo "Missing AWS_ROLE_TO_ASSUME"
-            missing=1
-          fi
-          if [ -z "${TF_STATE_BUCKET}" ]; then
-            echo "Missing TF_STATE_BUCKET"
-            missing=1
-          fi
-          if [ -z "${TF_STATE_DDB_TABLE}" ]; then
-            echo "Missing TF_STATE_DDB_TABLE"
-            missing=1
-          fi
-
+          [ -z "$AWS_ROLE_TO_ASSUME" ] && echo "Missing AWS_ROLE_TO_ASSUME" && missing=1
+          [ -z "$TF_STATE_BUCKET" ] && echo "Missing TF_STATE_BUCKET" && missing=1
+          [ -z "$TF_STATE_DDB_TABLE" ] && echo "Missing TF_STATE_DDB_TABLE" && missing=1
           if [ "$missing" -eq 1 ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
-        env:
-          AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
-          TF_STATE_DDB_TABLE: ${{ secrets.TF_STATE_DDB_TABLE }}
 
       - name: Stop early if secrets missing
         if: steps.precheck.outputs.ready != 'true'
         run: |
-          echo "Required secrets are missing. Skipping plan/apply."
+          echo "Secrets missing. Skipping deploy."
           exit 0
 
       - name: Configure AWS credentials (OIDC)
@@ -119,6 +106,10 @@ jobs:
       - name: Terraform init (remote state)
         if: steps.precheck.outputs.ready == 'true'
         shell: bash
+        env:
+          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+          TF_STATE_DDB_TABLE: ${{ secrets.TF_STATE_DDB_TABLE }}
+          TF_STATE_KEY: ${{ secrets.TF_STATE_KEY }}
         run: |
           KEY="${TF_STATE_KEY}"
           if [ -z "$KEY" ]; then KEY="state/terraform.tfstate"; fi
@@ -129,10 +120,6 @@ jobs:
             -backend-config="region=${AWS_REGION}" \
             -backend-config="dynamodb_table=${TF_STATE_DDB_TABLE}" \
             -backend-config="encrypt=true"
-        env:
-          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
-          TF_STATE_DDB_TABLE: ${{ secrets.TF_STATE_DDB_TABLE }}
-          TF_STATE_KEY: ${{ secrets.TF_STATE_KEY }}
 
       - name: Terraform plan
         if: steps.precheck.outputs.ready == 'true'
