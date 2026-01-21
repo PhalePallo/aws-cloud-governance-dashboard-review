@@ -10,17 +10,6 @@ on:
     paths:
       - "terraform/**"
       - ".github/workflows/terraform.yml"
-  workflow_dispatch:
-    inputs:
-      action:
-        description: "Terraform action to run"
-        required: true
-        default: "apply"
-        type: choice
-        options:
-          - plan
-          - apply
-          - destroy
 
 permissions:
   contents: read
@@ -33,8 +22,9 @@ concurrency:
 env:
   TF_IN_AUTOMATION: "true"
   TF_INPUT: "false"
-  TF_WORKING_DIR: "terraform"
   AWS_REGION: "us-east-1"
+  TF_STATE_BUCKET: "aws-cloud-governance-terraform-state-659587495811"
+  TF_STATE_KEY: "aws-cloud-governance/terraform.tfstate"
 
 jobs:
   checks:
@@ -42,140 +32,63 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ${{ env.TF_WORKING_DIR }}
-
+        working-directory: terraform
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: false
+      - uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.7.5
 
-      # fmt check should be non-destructive and not require credentials
       - name: Terraform fmt (check)
         run: terraform fmt -check -recursive
 
-      # init without backend avoids needing remote state config in PR checks
       - name: Terraform init (no backend)
         run: terraform init -input=false -backend=false
 
       - name: Terraform validate
         run: terraform validate -no-color
 
-  plan:
-    name: plan (remote state)
+  plan-apply:
+    name: plan/apply
     runs-on: ubuntu-latest
-    needs: checks
+    needs: [checks]
     defaults:
       run:
-        working-directory: ${{ env.TF_WORKING_DIR }}
-
-    # Only run plan if the required secrets exist (prevents “invalid workflow” mistakes)
-    # Note: you CANNOT reference secrets in GitHub "if:" expressions safely in all contexts.
-    # So we do checks inside steps.
+        working-directory: terraform
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: false
+      - uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.7.5
 
-      - name: Precheck required secrets
-        shell: bash
-        run: |
-          missing=0
-          for s in AWS_ROLE_TO_ASSUME TF_STATE_BUCKET TF_STATE_DDB_TABLE; do
-            if [ -z "${!s}" ]; then
-              echo "Missing required secret: $s"
-              missing=1
-            fi
-          done
-          if [ "$missing" -eq 1 ]; then
-            echo "Required secrets are missing. Add them in GitHub Repo Settings > Secrets and variables > Actions."
-            exit 1
-          fi
-        env:
-          AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
-          TF_STATE_DDB_TABLE: ${{ secrets.TF_STATE_DDB_TABLE }}
-
-      - name: Configure AWS credentials (OIDC)
+      - name: Configure AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform init (remote backend)
         run: |
           terraform init -input=false \
-            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
-            -backend-config="key=aws-cloud-governance/terraform.tfstate" \
-            -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=${{ secrets.TF_STATE_DDB_TABLE }}" \
-            -backend-config="encrypt=true"
+            -backend-config="bucket=${TF_STATE_BUCKET}" \
+            -backend-config="key=${TF_STATE_KEY}" \
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
 
       - name: Terraform plan
         run: terraform plan -no-color -out=tfplan
 
-      - name: Upload tfplan artifact
+      - name: Upload tfplan
         uses: actions/upload-artifact@v4
         with:
           name: tfplan
           path: terraform/tfplan
 
-  apply:
-    name: apply/destroy (manual)
-    runs-on: ubuntu-latest
-    needs: plan
-    if: github.event_name == 'workflow_dispatch'
-    environment:
-      name: production
-
-    defaults:
-      run:
-        working-directory: ${{ env.TF_WORKING_DIR }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: false
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.7.5
-
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Terraform init (remote backend)
-        run: |
-          terraform init -input=false \
-            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
-            -backend-config="key=aws-cloud-governance/terraform.tfstate" \
-            -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=${{ secrets.TF_STATE_DDB_TABLE }}" \
-            -backend-config="encrypt=true"
-
-      - name: Terraform apply OR destroy
-        shell: bash
-        run: |
-          if [ "${{ github.event.inputs.action }}" = "destroy" ]; then
-            terraform destroy -auto-approve
-          elif [ "${{ github.event.inputs.action }}" = "plan" ]; then
-            terraform plan -no-color
-          else
-            terraform apply -auto-approve
-          fi
+      - name: Terraform apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve -input=false tfplan
