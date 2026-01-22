@@ -178,7 +178,6 @@ Each event shows:
 - Authentication (Cognito) for protected access
 - CloudTrail integration for real AWS events
 - Metrics dashboard (CloudWatch)
-- CI/CD pipeline for automated Terraform applies
 
 ---
 
