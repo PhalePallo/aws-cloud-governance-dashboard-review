@@ -12,3 +12,8 @@ terraform/terraform.tfstate.*
 
 # Node
 node_modules/
+
+# Lambda build artifacts
+lambda.zip
+lambda-dist/
+
