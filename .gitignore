@@ -1,0 +1,23 @@
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.*
+*.tfstate
+*.tfstate.*
+
+
+# AWS
+.aws/
+
+# Node
+node_modules/
+
+# Lambda build artifacts
+lambda.zip
+lambda-dist/
+
+
+# Lambda build artifacts
+lambda.zip
+lambda-dist/
